@@ -1,0 +1,25 @@
+{
+  "name": "workflow-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A small, extensible configurable automation workflow engine.",
+  "workspaces": ["client", "server"],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:server dev:client",
+    "dev:server": "tsx server/src/server.ts",
+    "dev:client": "vite --config client/vite.config.ts",
+    "build": "npm run build:server && npm run build:client",
+    "build:server": "tsc -p server/tsconfig.json",
+    "build:client": "vite build --config client/vite.config.ts",
+    "start": "node server/dist/server/src/server.js",
+    "test": "tsx --test server/src/*.test.ts",
+    "typecheck": "tsc -p server/tsconfig.json --noEmit && tsc -p client/tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "npm-run-all": "^4.1.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5"
+  }
+}

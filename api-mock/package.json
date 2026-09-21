@@ -1,0 +1,17 @@
+{
+  "name": "api-request-mock-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A small, extensible API request recording and mock replay platform.",
+  "workspaces": ["client", "server"],
+  "scripts": {
+    "dev": "npm run dev:server & npm run dev:client",
+    "dev:server": "npm run dev --workspace server",
+    "dev:client": "npm run dev --workspace client",
+    "build": "npm run build --workspace server && npm run build --workspace client",
+    "test": "npm run build --workspace server && npm run test --workspace server"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
