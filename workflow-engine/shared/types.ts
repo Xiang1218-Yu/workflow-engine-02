@@ -1,4 +1,4 @@
-export type StepType = "log" | "set" | "delay";
+export type StepType = "log" | "set" | "delay" | "condition";
 
 export interface LogStep {
   id: string;
@@ -19,7 +19,44 @@ export interface DelayStep {
   durationMs: number;
 }
 
-export type WorkflowStep = LogStep | SetStep | DelayStep;
+/** Steps allowed inside a condition branch (branching cannot be nested). */
+export type LeafStep = LogStep | SetStep | DelayStep;
+
+/**
+ * Operators supported by a condition branch.
+ * - string-eq / string-neq compare the raw string value of a variable.
+ * - number-* parse both sides as numbers before comparing.
+ * - var-missing matches only when the variable was never set.
+ */
+export type ConditionOperator =
+  | "string-eq"
+  | "string-neq"
+  | "number-eq"
+  | "number-neq"
+  | "number-gt"
+  | "number-gte"
+  | "number-lt"
+  | "number-lte"
+  | "var-missing";
+
+export interface ConditionBranch {
+  operator: ConditionOperator;
+  /** Variable name to inspect, e.g. "count" or "user.name" (no {{ }} wrappers). */
+  variable: string;
+  /** Value to compare against (supports {{variable}} interpolation); ignored for var-missing. */
+  value: string;
+  /** Steps run in order when this is the first branch whose condition matches. */
+  steps: LeafStep[];
+}
+
+export interface ConditionStep {
+  id: string;
+  type: "condition";
+  /** Evaluated top to bottom; the first matching branch wins. */
+  branches: ConditionBranch[];
+}
+
+export type WorkflowStep = LeafStep | ConditionStep;
 
 export interface Workflow {
   id: string;

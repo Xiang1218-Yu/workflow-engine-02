@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { CreateWorkflowInput, Workflow, WorkflowRun, WorkflowStep } from "../../shared/types.js";
+import { validateWorkflowSteps } from "../../shared/validation.js";
 
 export class WorkflowStore {
   private readonly workflows = new Map<string, Workflow>();
@@ -21,7 +22,43 @@ export class WorkflowStore {
         createdAt: now,
         updatedAt: now
       };
+      const branching: Workflow = {
+        id: "branching-workflow",
+        name: "Conditional routing",
+        description: "Branches on a counter: skips a log and delay when the number is small or the flag is missing.",
+        steps: [
+          { id: "branch-set", type: "set", key: "count", value: "2" },
+          {
+            id: "branch-condition",
+            type: "condition",
+            branches: [
+              {
+                operator: "var-missing",
+                variable: "name",
+                value: "",
+                steps: [
+                  { id: "branch-anon-log", type: "log", message: "Running without a name." },
+                  { id: "branch-anon-set", type: "set", key: "name", value: "anonymous" }
+                ]
+              },
+              {
+                operator: "number-gte",
+                variable: "count",
+                value: "3",
+                steps: [
+                  { id: "branch-heavy-delay", type: "delay", durationMs: 250 },
+                  { id: "branch-heavy-log", type: "log", message: "Count {{count}} is large, taking the slow path." }
+                ]
+              }
+            ]
+          },
+          { id: "branch-done", type: "log", message: "Hello {{name}} (count {{count}}), workflow complete." }
+        ],
+        createdAt: now,
+        updatedAt: now
+      };
       this.workflows.set(sample.id, sample);
+      this.workflows.set(branching.id, branching);
     }
   }
 
@@ -90,15 +127,9 @@ export class WorkflowStore {
   }
 }
 
+/** @deprecated Prefer validateWorkflowSteps from shared/validation.js for detailed errors. */
 export function validateSteps(steps: unknown): steps is WorkflowStep[] {
-  if (!Array.isArray(steps) || steps.length === 0) return false;
-  return steps.every((step) => {
-    if (!step || typeof step !== "object") return false;
-    const candidate = step as Record<string, unknown>;
-    if (typeof candidate.id !== "string" || candidate.id.length === 0) return false;
-    if (candidate.type === "log") return typeof candidate.message === "string";
-    if (candidate.type === "set") return typeof candidate.key === "string" && candidate.key.length > 0 && typeof candidate.value === "string";
-    if (candidate.type === "delay") return Number.isFinite(candidate.durationMs) && Number(candidate.durationMs) >= 0 && Number(candidate.durationMs) <= 60_000;
-    return false;
-  });
+  return validateWorkflowSteps(steps).valid;
 }
+
+export { validateWorkflowSteps };
