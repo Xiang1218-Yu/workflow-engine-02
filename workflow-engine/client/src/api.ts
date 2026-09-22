@@ -2,8 +2,11 @@ import type { CreateWorkflowInput, Workflow, WorkflowRun } from "../../shared/ty
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { headers: { "Content-Type": "application/json" }, ...init });
-  const body = (await response.json()) as T & { error?: string };
-  if (!response.ok) throw new Error(body.error ?? `Request failed: ${response.status}`);
+  const body = (await response.json()) as T & { error?: string; errors?: string[] };
+  if (!response.ok) {
+    const detail = Array.isArray(body.errors) && body.errors.length > 0 ? body.errors.join("\n") : undefined;
+    throw new Error(detail ?? body.error ?? `Request failed: ${response.status}`);
+  }
   return body;
 }
 

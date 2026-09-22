@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import type { CreateWorkflowInput, Workflow, WorkflowRun, WorkflowStep } from "../../shared/types.js";
+import type { CreateWorkflowInput, Workflow, WorkflowRun } from "../../shared/types.js";
+import { validateWorkflowSteps } from "../../shared/validation.js";
 
 export class WorkflowStore {
   private readonly workflows = new Map<string, Workflow>();
@@ -90,15 +91,9 @@ export class WorkflowStore {
   }
 }
 
-export function validateSteps(steps: unknown): steps is WorkflowStep[] {
-  if (!Array.isArray(steps) || steps.length === 0) return false;
-  return steps.every((step) => {
-    if (!step || typeof step !== "object") return false;
-    const candidate = step as Record<string, unknown>;
-    if (typeof candidate.id !== "string" || candidate.id.length === 0) return false;
-    if (candidate.type === "log") return typeof candidate.message === "string";
-    if (candidate.type === "set") return typeof candidate.key === "string" && candidate.key.length > 0 && typeof candidate.value === "string";
-    if (candidate.type === "delay") return Number.isFinite(candidate.durationMs) && Number(candidate.durationMs) >= 0 && Number(candidate.durationMs) <= 60_000;
-    return false;
-  });
+export { validateSteps } from "../../shared/validation.js";
+
+/** Detailed validation result, re-exported so callers can import it from the store layer too. */
+export function validateWorkflow(steps: unknown) {
+  return validateWorkflowSteps(steps);
 }

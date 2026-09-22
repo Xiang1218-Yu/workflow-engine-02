@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { executeWorkflow } from "./engine.js";
-import { validateSteps, WorkflowStore } from "./store.js";
+import { WorkflowStore } from "./store.js";
+import { validateWorkflowSteps } from "../../shared/validation.js";
 import type { CreateWorkflowInput } from "../../shared/types.js";
 
 const jsonHeaders = { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "*" };
@@ -42,10 +43,14 @@ export function createApp(store = new WorkflowStore()) {
 
       if (req.method === "POST" && parts.length === 2 && parts[1] === "workflows") {
         const body = (await readJson(req)) as Partial<CreateWorkflowInput>;
-        if (typeof body.name !== "string" || body.name.trim().length === 0 || !validateSteps(body.steps)) {
-          return send(res, 400, { error: "name and a valid non-empty steps array are required" });
+        if (typeof body.name !== "string" || body.name.trim().length === 0) {
+          return send(res, 400, { error: "Workflow name is required.", errors: ["Workflow name cannot be empty."] });
         }
-        const workflow = store.createWorkflow({ name: body.name, description: body.description, steps: body.steps });
+        const result = validateWorkflowSteps(body.steps);
+        if (!result.valid) {
+          return send(res, 400, { error: "The workflow could not be saved. Fix the step errors below.", errors: result.errors });
+        }
+        const workflow = store.createWorkflow({ name: body.name, description: body.description, steps: body.steps as CreateWorkflowInput["steps"] });
         return send(res, 201, { workflow });
       }
 
